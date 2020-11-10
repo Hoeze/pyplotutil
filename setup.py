@@ -5,6 +5,9 @@ from setuptools import setup, find_packages
 
 requirements = [
     "seaborn",
+    "numpy",
+    "pandas",
+    "scikit-learn",
 ]
 
 test_requirements = [
