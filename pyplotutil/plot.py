@@ -21,20 +21,25 @@ __all__ = [
 ]
 
 
-def roc_curve(y_true, y_pred, label, formatting='%s (auROC = %0.2f%%)'):
+def roc_curve(y_true, y_pred, label, formatting='%s (auROC = %0.2f%%)', type="step", where="post"):
     # Compute False postive rate, and True positive rate
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_pred)
     # Calculate Area under the curve to display on the plot
     auc = metrics.roc_auc_score(y_true, y_pred)
     # Now, plot the computed values
-    plt.plot(fpr, tpr, label=formatting % (label, 100 * auc))
+    if type == "step":
+        plt.step(fpr, tpr, label=formatting % (label, 100 * auc), where=where)
+    elif type == "line":
+        plt.plot(fpr, tpr, label=formatting % (label, 100 * auc))
+    else:
+        raise ValueError("Unknown curve type %s" % type)
 
 
-def roc_plot(y_trues, y_preds: list, labels=None, add_random_shuffle=False, legend_pos="inside"):
+def roc_plot(y_trues, y_preds: list, labels=None, add_random_shuffle=False, legend_pos="inside", **kwargs):
     plt.figure()
-
-    if not isinstance(y_preds, list):
-        raise ValueError("y_preds is not a list")
+    
+    if not isinstance(y_preds, list) and not np.ndim(y_preds) > 1:
+        y_preds = [y_preds]
 
     if not isinstance(y_trues, list) and not np.ndim(y_trues) > 1:
         y_trues = [y_trues] * len(y_preds)
@@ -54,11 +59,11 @@ def roc_plot(y_trues, y_preds: list, labels=None, add_random_shuffle=False, lege
     formatting = '%s (auROC = %0.2f%%)' if legend_pos == "inside" else '%s\n(auROC = %0.2f%%)'
 
     # Below for loop iterates through your models list
-    for l, y_true, y_pred in zip(labels, y_true, np.asarray(y_preds).T):
-        roc_curve(y_true, y_pred, label=l, formatting=formatting)
+    for l, y_true, y_pred in zip(labels, y_trues, y_preds):
+        roc_curve(y_true, y_pred, label=l, formatting=formatting, **kwargs)
 
     if add_random_shuffle:
-        roc_curve(np.random.choice(y_true, len(y_true)), label="random shuffle", formatting=formatting)
+        roc_curve(np.random.choice(y_true, len(y_true)), label="random shuffle", formatting=formatting, **kwargs)
 
     # Custom settings for the plot
     plt.plot([0, 1], [0, 1], 'r--')
@@ -91,11 +96,11 @@ def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)
         raise ValueError("Unknown curve type %s" % type)
 
 
-def precision_recall_plot(y_trues, y_preds, labels=None, add_random_shuffle=True, legend_pos="inside"):
+def precision_recall_plot(y_trues, y_preds, labels=None, add_random_shuffle=True, legend_pos="inside", **kwargs):
     plt.figure()
-
-    if not isinstance(y_preds, list):
-        raise ValueError("y_preds is not a list")
+    
+    if not isinstance(y_preds, list) and not np.ndim(y_preds) > 1:
+        y_preds = [y_preds]
 
     if not isinstance(y_trues, list) and not np.ndim(y_trues) > 1:
         y_trues = [y_trues] * len(y_preds)
@@ -117,11 +122,11 @@ def precision_recall_plot(y_trues, y_preds, labels=None, add_random_shuffle=True
 
     # Below for loop iterates through your models list
     for l, y_true, y_pred in zip(labels, y_trues, y_preds):
-        precision_recall_curve(y_true, y_pred, label=l, formatting=formatting)
+        precision_recall_curve(y_true, y_pred, label=l, formatting=formatting, **kwargs)
 
     if add_random_shuffle:
         precision_recall_curve(y_true, np.random.choice(y_true, len(y_true)), label="random shuffle",
-                               formatting=formatting)
+                               formatting=formatting, **kwargs)
 
     # Custom settings for the plot
     # plt.grid()
@@ -166,11 +171,11 @@ def tp_at_k_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', y_true
         raise ValueError("Unknown curve type %s" % type)
 
 
-def tp_at_k_plot(y_trues, y_preds, labels=None, add_random_uniform=False, legend_pos="inside"):
+def tp_at_k_plot(y_trues, y_preds, labels=None, add_random_uniform=False, legend_pos="inside", **kwargs):
     plt.figure()
-
-    if not isinstance(y_preds, list):
-        raise ValueError("y_preds is not a list")
+    
+    if not isinstance(y_preds, list) and not np.ndim(y_preds) > 1:
+        y_preds = [y_preds]
 
     # calculate sum only if there is only a single y_true array
     y_true_sum = None
@@ -193,12 +198,12 @@ def tp_at_k_plot(y_trues, y_preds, labels=None, add_random_uniform=False, legend
     formatting = '%s (auc = %0.2f%%)' if legend_pos == "inside" else '%s\n(auc = %0.2f%%)'
 
     # Below for loop iterates through your models list
-    for l, y_true, y_pred in zip(labels, y_trues, np.asarray(y_preds).T):
-        tp_at_k_curve(y_true, y_pred, label=l, formatting=formatting, y_true_sum=y_true_sum)
+    for l, y_true, y_pred in zip(labels, y_trues, y_preds):
+        tp_at_k_curve(y_true, y_pred, label=l, formatting=formatting, y_true_sum=y_true_sum, **kwargs)
 
     if add_random_uniform:
         tp_at_k_curve(y_true, np.random.uniform(size=len(y_true)), label="random uniform", formatting=formatting,
-                      y_true_sum=y_true_sum)
+                      y_true_sum=y_true_sum, **kwargs)
 
     # Custom settings for the plot
     plt.plot([0, len(y_true)], [0, y_true_sum], 'r--')
