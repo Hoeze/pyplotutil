@@ -238,7 +238,7 @@ def density_scatter(
         normalize_density=True,
         kde=False,
         scatter_kwargs=None,
-        distplot_kwargs=None,
+        marginals_kwargs=None,
         jointgrid_kwargs=None,
         **kwargs
 ):
@@ -334,16 +334,19 @@ def density_scatter(
         combined_jointgrid_kwargs["ylim"] = ylim
     # default jointgrid_kwargs will be overridden by user-defined options
     if jointgrid_kwargs is not None:
-        for k, v in jointgrid_kwargs.items():
-            combined_jointgrid_kwargs[k] = v
+        combined_jointgrid_kwargs.update(jointgrid_kwargs)
 
-    combined_distplot_kwargs = dict(
-        kde=kde  # kde takes a long time to calculate
+    combined_marginals_kwargs = dict(
+        bins=bins, # per default same number of bins as for the hist2d
+        kde=kde,  # kde takes a long time to calculate
     )
-    # default distplot_kwargs will be overridden by user-defined options
+    # default marginals_kwargs will be overridden by user-defined options
     if distplot_kwargs is not None:
-        for k, v in distplot_kwargs.items():
-            combined_distplot_kwargs[k] = v
+        if marginals_kwargs is None:
+            marginals_kwargs = dict()
+        marginals_kwargs.update(distplot_kwargs)
+    if marginals_kwargs is not None:
+        combined_marginals_kwargs.update(marginals_kwargs)
 
     # create the JointGrid
     g = sns.JointGrid(x=x, y=y, **combined_jointgrid_kwargs)
