@@ -341,16 +341,16 @@ def density_scatter(
         kde=kde,  # kde takes a long time to calculate
     )
     # default marginals_kwargs will be overridden by user-defined options
-    if distplot_kwargs is not None:
+    if "distplot_kwargs" in kwargs:
         if marginals_kwargs is None:
             marginals_kwargs = dict()
-        marginals_kwargs.update(distplot_kwargs)
+        marginals_kwargs.update(kwargs["distplot_kwargs"])
     if marginals_kwargs is not None:
         combined_marginals_kwargs.update(marginals_kwargs)
 
     # create the JointGrid
     g = sns.JointGrid(x=x, y=y, **combined_jointgrid_kwargs)
-    g = g.plot_marginals(sns.histplot, **combined_distplot_kwargs)
+    g = g.plot_marginals(sns.histplot, **combined_marginals_kwargs)
     # hack to get the correct coordinates set in plt.scatter
     g.x = x
     g.y = y
