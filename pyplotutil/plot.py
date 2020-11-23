@@ -37,7 +37,7 @@ def roc_curve(y_true, y_pred, label, formatting='%s (auROC = %0.2f%%)', type="st
 
 def roc_plot(y_trues, y_preds: list, labels=None, add_random_shuffle=False, legend_pos="inside", **kwargs):
     plt.figure()
-    
+
     if not isinstance(y_preds, list) and not np.ndim(y_preds) > 1:
         y_preds = [y_preds]
 
@@ -98,7 +98,7 @@ def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)
 
 def precision_recall_plot(y_trues, y_preds, labels=None, add_random_shuffle=True, legend_pos="inside", **kwargs):
     plt.figure()
-    
+
     if not isinstance(y_preds, list) and not np.ndim(y_preds) > 1:
         y_preds = [y_preds]
 
@@ -162,7 +162,6 @@ def tp_at_k_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', y_true
     # Calculate Area under the curve to display on the plot
     auc = metrics.auc(df["k"] / len(y_true), df["n_true"] / y_true_sum)
     # Now, plot the computed values
-    plt.plot(df["k"], df["n_true"], label=formatting % (label, 100 * auc))
     if type == "step":
         plt.step(df["k"], df["n_true"], label=formatting % (label, 100 * auc), where=where)
     elif type == "line":
@@ -173,7 +172,7 @@ def tp_at_k_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', y_true
 
 def tp_at_k_plot(y_trues, y_preds, labels=None, add_random_uniform=False, legend_pos="inside", **kwargs):
     plt.figure()
-    
+
     if not isinstance(y_preds, list) and not np.ndim(y_preds) > 1:
         y_preds = [y_preds]
 
