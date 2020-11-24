@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 
-def roc_curve(y_true, y_pred, label, formatting='%s (auROC = %0.2f%%)', type="step", where="post"):
+def roc_curve(y_true, y_pred, label, formatting='%s (auROC = %0.2f%%)', type="step", where="mid"):
     # Compute False postive rate, and True positive rate
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_pred)
     # Calculate Area under the curve to display on the plot
@@ -82,7 +82,7 @@ def roc_plot(y_trues, y_preds: list, labels=None, add_random_shuffle=False, lege
     return plt.gcf()
 
 
-def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', type="step", where="post"):
+def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', type="step", where="mid"):
     # Compute precision and recall
     precision, recall, thresholds = metrics.precision_recall_curve(y_true=y_true, probas_pred=y_pred)
     # Calculate Area under the curve to display on the plot
@@ -153,7 +153,7 @@ def tp_at_k(observed, score):
     return df
 
 
-def tp_at_k_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', y_true_sum=None, type="step", where="post"):
+def tp_at_k_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', y_true_sum=None, type="step", where="mid"):
     if not y_true_sum:
         y_true_sum = np.asarray(np.sum(y_true))
 
