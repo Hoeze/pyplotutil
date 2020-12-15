@@ -10,18 +10,41 @@ import seaborn as sns
 from sklearn import metrics
 
 __all__ = [
-   'roc_curve',
-   'roc_plot',
-   'precision_recall_curve',
-   'precision_recall_plot',
-   'tp_at_k',
-   'tp_at_k_curve',
-   'tp_at_k_plot',
-   'density_scatter',
+    'roc_curve',
+    'roc_plot',
+    'precision_recall_curve',
+    'precision_recall_plot',
+    'tp_at_k',
+    'tp_at_k_curve',
+    'tp_at_k_plot',
+    'density_scatter',
 ]
 
 
-def roc_curve(y_true, y_pred, label, formatting='%s (auROC = %0.2f%%)', type="step", where="mid"):
+def _prc_step(precision, recall, sklearn_mode=True):
+    if not sklearn_mode:
+        # make sure that input is sorted by recall
+        idx = np.argsort(recall)
+    else:
+        # by default, sklearn reports recall sorted descending
+        # => just inverting in this case is faster
+        idx = slice(None, None, -1)
+    idx
+
+    prec_step = np.zeros((len(precision) * 2) - 1)
+    rec_step = np.zeros((len(recall) * 2) - 1)
+
+    prec_step[np.arange(len(precision)) * 2] = precision[idx]
+    rec_step[np.arange(len(recall)) * 2] = recall[idx]
+
+    # resemble 'post' step plot
+    prec_step[np.arange(len(recall) - 1) * 2 + 1] = precision[idx][1:]
+    rec_step[np.arange(len(recall) - 1) * 2 + 1] = recall[idx][:-1]
+
+    return prec_step, rec_step
+
+
+def roc_curve(y_true, y_pred, label, formatting='%s (auROC = %0.2f%%)', type="step", where="post"):
     # Compute False postive rate, and True positive rate
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_pred)
     # Calculate Area under the curve to display on the plot
@@ -82,11 +105,11 @@ def roc_plot(y_trues, y_preds: list, labels=None, add_random_shuffle=False, lege
     return plt.gcf()
 
 
-def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', type="step", where="mid"):
+def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', type="step", where="post"):
     # Compute precision and recall
     precision, recall, thresholds = metrics.precision_recall_curve(y_true=y_true, probas_pred=y_pred)
     # Calculate Area under the curve to display on the plot
-    auc = metrics.auc(recall, precision)
+    auc = metrics.average_precision_score(y_true=y_true, y_score=y_pred)
     # Now, plot the computed values
     if type == "step":
         plt.step(recall, precision, label=formatting % (label, 100 * auc), where=where)
@@ -153,7 +176,7 @@ def tp_at_k(observed, score):
     return df
 
 
-def tp_at_k_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', y_true_sum=None, type="step", where="mid"):
+def tp_at_k_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', y_true_sum=None, type="step", where="post"):
     if not y_true_sum:
         y_true_sum = np.asarray(np.sum(y_true))
 
@@ -337,7 +360,7 @@ def density_scatter(
         combined_jointgrid_kwargs.update(jointgrid_kwargs)
 
     combined_marginals_kwargs = dict(
-        bins=bins, # per default same number of bins as for the hist2d
+        bins=bins,  # per default same number of bins as for the hist2d
         kde=kde,  # kde takes a long time to calculate
     )
     # default marginals_kwargs will be overridden by user-defined options
@@ -361,4 +384,3 @@ def density_scatter(
     cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
     plt.colorbar(cax=cbar_ax)
     return g
-
