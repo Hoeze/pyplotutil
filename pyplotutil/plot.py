@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 import numpy.random as nr
 import numpy as np
 import pandas as pd
@@ -29,7 +31,6 @@ def _prc_step(precision, recall, sklearn_mode=True):
         # by default, sklearn reports recall sorted descending
         # => just inverting in this case is faster
         idx = slice(None, None, -1)
-    idx
 
     prec_step = np.zeros((len(precision) * 2) - 1)
     rec_step = np.zeros((len(recall) * 2) - 1)
@@ -86,7 +87,10 @@ def roc_plot(y_trues, y_preds: list, labels=None, add_random_shuffle=False, lege
         roc_curve(y_true, y_pred, label=l, formatting=formatting, **kwargs)
 
     if add_random_shuffle:
-        roc_curve(np.random.choice(y_true, len(y_true)), label="random shuffle", formatting=formatting, **kwargs)
+        y_true = np.concatenate(y_trues)
+        rng = np.random.default_rng(42)
+
+        roc_curve(y_true, rng.choice(y_true, len(y_true)), label="random shuffle", formatting=formatting, **kwargs)
 
     # Custom settings for the plot
     plt.plot([0, 1], [0, 1], 'r--')
@@ -119,7 +123,15 @@ def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)
         raise ValueError("Unknown curve type %s" % type)
 
 
-def precision_recall_plot(y_trues, y_preds, labels=None, add_random_shuffle=True, legend_pos="inside", **kwargs):
+def precision_recall_plot(
+        y_trues,
+        y_preds,
+        labels=None,
+        add_random_shuffle=True,
+        add_average=False,
+        legend_pos="inside",
+        **kwargs
+):
     plt.figure()
 
     if not isinstance(y_preds, list) and not np.ndim(y_preds) > 1:
@@ -148,8 +160,15 @@ def precision_recall_plot(y_trues, y_preds, labels=None, add_random_shuffle=True
         precision_recall_curve(y_true, y_pred, label=l, formatting=formatting, **kwargs)
 
     if add_random_shuffle:
-        precision_recall_curve(y_true, np.random.choice(y_true, len(y_true)), label="random shuffle",
+        y_true = np.concatenate(y_trues)
+        rng = np.random.default_rng(42)
+
+        precision_recall_curve(y_true, rng.choice(y_true, len(y_true)), label="random shuffle",
                                formatting=formatting, **kwargs)
+
+    if add_average:
+        average_precision_recall_curve(y_truecats=y_trues, y_preds=y_preds, label="average",
+                                       formatting=formatting, **kwargs)
 
     # Custom settings for the plot
     # plt.grid()
@@ -165,6 +184,119 @@ def precision_recall_plot(y_trues, y_preds, labels=None, add_random_shuffle=True
     # plt.tight_layout()
 
     return plt.gcf()
+
+
+def average_precision_recall(y_preds: List[np.ndarray], y_truecats: List[np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Calculate the average precision recall values given a list of predictions
+
+    :param y_preds: list of model predictions
+    :param y_truecats: list of categorical y_true's for the model predictions
+    :returns: precision, recall
+    """
+    # calculate (precision, recall, thresholds) for every prediction
+    prcs = [
+        sklearn.metrics.precision_recall_curve(
+            y_true=y_truecat,
+            probas_pred=y_pred,
+        ) for y_pred, y_truecat in zip(y_preds, y_truecats)
+    ]
+
+    # number of positives per prediction
+    n_positives = [y_truecat.sum().item() for y_truecat in y_truecats]
+
+    # proportion of positive values per prediction, compared to the total number of positives
+    props = np.asarray(n_positives)
+    props = props / np.sum(props)
+
+    # apply step-function to get correct precision recall curve
+    stepped = [
+        _prc_step(precision, recall)
+        for precision, recall, thresholds in prcs
+    ]
+
+    # interpolate step functions s.t. we can get precision for an arbitrary recall value
+    fs = [scipy.interpolate.interp1d(x=recall, y=precision, kind="next") for precision, recall in stepped]
+
+    # get union of all recalls
+    recalls = [p[1] for p in prcs]
+    union_recall = np.sort(np.unique(np.concatenate(recalls)))[::-1]
+
+    # Compute the average precision as the weighted mean of all prediction's precision values.
+    # Use the union of all recalls to interpolate the precisions:
+    #     precision = f(recall)
+    # Weight by the total number of positives, since `recall = tps / n_positive`
+    precisions = [f(union_recall) for f in fs]
+    precisions = np.asarray(precisions)
+    ave_precision = np.sum(props * precisions.T, axis=-1)
+
+    return ave_precision, union_recall
+
+
+def average_auPRC(y_preds: List[np.ndarray], y_truecats: List[np.ndarray]) -> float:
+    """
+    Calculate the average area under precision recall (auPRC) values given a list of predictions.
+
+    TODO: needs test like this:
+    ```python
+        precision, recall = average_precision_recall(
+            y_preds = [-pred["y_pred"] for pred in valid_preds],
+            y_truecats = [pred["y_truecat"] for pred in valid_preds],
+        )
+
+        a, b = _prc_step(precision, recall)
+        apr_auc = sklearn.metrics.auc(b, a)
+
+        ave_auPRC = average_auPRC(
+            y_preds = [-pred["y_pred"] for pred in valid_preds],
+            y_truecats = [pred["y_truecat"] for pred in valid_preds],
+        )
+        assert np.close(ave_auPRC, apr_auc)
+    ```
+
+    :param y_preds: list of model predictions
+    :param y_truecats: list of categorical y_true's for the model predictions
+    :returns: average auPRC
+    """
+    # calculate (precision, recall, thresholds) for every prediction
+    auPRCs = [
+        sklearn.metrics.average_precision_score(
+            y_true=y_truecat,
+            y_score=y_pred,
+        ) for y_pred, y_truecat in zip(y_preds, y_truecats)
+    ]
+
+    # number of positives per prediction
+    n_positives = [y_truecat.sum().item() for y_truecat in y_truecats]
+
+    # proportion of positive values per prediction, compared to the total number of positives
+    props = np.asarray(n_positives)
+    props = props / np.sum(props)
+
+    ave_auPRC = np.sum(props * auPRCs)
+
+    return ave_auPRC
+
+
+def average_precision_recall_curve(
+        y_truecats: List[np.ndarray],
+        y_preds: List[np.ndarray],
+        label,
+        formatting='%s (auc = %0.2f%%)',
+        type="step",
+        where="post"
+):
+    # Compute precision and recall
+    precision, recall = average_precision_recall(y_truecats=y_truecats, y_preds=y_preds)
+    # Calculate Area under the curve to display on the plot
+    auc = average_auPRC(y_truecats=y_truecats, y_preds=y_preds)
+    # Now, plot the computed values
+    if type == "step":
+        plt.step(recall, precision, label=formatting % (label, 100 * auc), where=where)
+    elif type == "line":
+        plt.plot(recall, precision, label=formatting % (label, 100 * auc))
+    else:
+        raise ValueError("Unknown curve type %s" % type)
 
 
 def tp_at_k(observed, score):
