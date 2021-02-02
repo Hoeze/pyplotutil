@@ -16,6 +16,9 @@ __all__ = [
     'roc_plot',
     'precision_recall_curve',
     'precision_recall_plot',
+    'average_precision_recall',
+    'average_auPRC',
+    'average_precision_recall_curve',
     'tp_at_k',
     'tp_at_k_curve',
     'tp_at_k_plot',
@@ -196,7 +199,7 @@ def average_precision_recall(y_preds: List[np.ndarray], y_truecats: List[np.ndar
     """
     # calculate (precision, recall, thresholds) for every prediction
     prcs = [
-        sklearn.metrics.precision_recall_curve(
+        metrics.precision_recall_curve(
             y_true=y_truecat,
             probas_pred=y_pred,
         ) for y_pred, y_truecat in zip(y_preds, y_truecats)
@@ -216,6 +219,7 @@ def average_precision_recall(y_preds: List[np.ndarray], y_truecats: List[np.ndar
     ]
 
     # interpolate step functions s.t. we can get precision for an arbitrary recall value
+    import scipy.interpolate
     fs = [scipy.interpolate.interp1d(x=recall, y=precision, kind="next") for precision, recall in stepped]
 
     # get union of all recalls
@@ -260,7 +264,7 @@ def average_auPRC(y_preds: List[np.ndarray], y_truecats: List[np.ndarray]) -> fl
     """
     # calculate (precision, recall, thresholds) for every prediction
     auPRCs = [
-        sklearn.metrics.average_precision_score(
+        metrics.average_precision_score(
             y_true=y_truecat,
             y_score=y_pred,
         ) for y_pred, y_truecat in zip(y_preds, y_truecats)
