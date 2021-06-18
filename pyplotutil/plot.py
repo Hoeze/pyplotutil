@@ -146,8 +146,8 @@ def precision_recall_plot(
         add_random_shuffle=True,
         add_average=False,
         legend_pos="inside",
-        xlim=(0, 1),
-        ylim=(0, 1),
+        xlim=(-0.05, 1.05),
+        ylim=(-0.05, 1.05),
         **kwargs
 ):
     plt.figure()
@@ -197,7 +197,8 @@ def precision_recall_plot(
     plt.title("Precision vs. Recall")
 
     if legend_pos == "inside":
-        plt.legend(loc=4)
+        plt.legend(loc="center right")
+        # plt.legend(loc="upper right")
     else:
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
