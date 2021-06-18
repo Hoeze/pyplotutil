@@ -112,18 +112,31 @@ def roc_plot(y_trues, y_preds: list, labels=None, add_random_shuffle=False, lege
     return plt.gcf()
 
 
-def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)', type="step", where="post"):
-    # Compute precision and recall
-    precision, recall, thresholds = metrics.precision_recall_curve(y_true=y_true, probas_pred=y_pred)
+def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)',
+                           type="step", where="post", binary_as_point=True):
     # Calculate Area under the curve to display on the plot
     auc = metrics.average_precision_score(y_true=y_true, y_score=y_pred)
-    # Now, plot the computed values
-    if type == "step":
-        plt.step(recall, precision, label=formatting % (label, 100 * auc), where=where)
-    elif type == "line":
-        plt.plot(recall, precision, label=formatting % (label, 100 * auc))
+
+    if np.size(np.unique(y_pred)) == 2 and binary_as_point:
+        # y_pred is a binary predictor
+        binarized_y_pred = y_pred == np.max(np.unique(y_pred))
+
+        recall = [metrics.recall_score(y_true, binarized_y_pred)]
+        precision = [metrics.precision_score(y_true, binarized_y_pred)]
+
+        # plot a single point instead of a curve
+        plt.scatter(recall, precision, marker='x', label=formatting % (label, 100 * auc))
     else:
-        raise ValueError("Unknown curve type %s" % type)
+        # Compute precision and recall
+        precision, recall, thresholds = metrics.precision_recall_curve(y_true=y_true, probas_pred=y_pred)
+
+        # Now, plot the computed values
+        if type == "step":
+            plt.step(recall, precision, label=formatting % (label, 100 * auc), where=where)
+        elif type == "line":
+            plt.plot(recall, precision, label=formatting % (label, 100 * auc))
+        else:
+            raise ValueError("Unknown curve type %s" % type)
 
 
 def precision_recall_plot(
@@ -133,6 +146,8 @@ def precision_recall_plot(
         add_random_shuffle=True,
         add_average=False,
         legend_pos="inside",
+        xlim=(0, 1),
+        ylim=(0, 1),
         **kwargs
 ):
     plt.figure()
@@ -175,6 +190,8 @@ def precision_recall_plot(
 
     # Custom settings for the plot
     # plt.grid()
+    plt.xlim(xlim)
+    plt.ylim(ylim)
     plt.xlabel("recall TP/(TP+FN)")
     plt.ylabel("precision TP/(TP+FP)")
     plt.title("Precision vs. Recall")
