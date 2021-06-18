@@ -117,7 +117,7 @@ def precision_recall_curve(y_true, y_pred, label, formatting='%s (auc = %0.2f%%)
     # Calculate Area under the curve to display on the plot
     auc = metrics.average_precision_score(y_true=y_true, y_score=y_pred)
 
-    if binary_as_point and np.size(np.unique(y_pred)) == 2:
+    if binary_as_point and (np.size(np.unique(y_pred)) == 2):
         # y_pred is a binary predictor
         binarized_y_pred = y_pred == np.max(np.unique(y_pred))
 
